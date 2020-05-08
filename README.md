@@ -87,5 +87,5 @@ default:
 Thanks to [machinebox/graphql](https://github.com/machinebox/graphql/), learning a lot from it.  
 
 ## License
-Apache License 2.0
+Apache License 2.0  
 Copyright 2020 PoohVPN

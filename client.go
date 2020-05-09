@@ -9,22 +9,32 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 )
 
+type Client struct {
+	*Option
+	WebSocketClient *WSClient
+}
+
 // NewClient only take the first Option if given
-func NewClient(endpoint string, opt ...*Option) *Client {
+func NewClient(endpoint string, opt ...Option) *Client {
 	client := &Client{
 		Option: &Option{},
 	}
-	if len(opt) > 0 && opt[0] != nil {
-		client.Option = opt[0]
+	if len(opt) > 0 {
+		client.Option = &opt[0]
 	}
 	if client.HTTPClient == nil {
 		client.HTTPClient = http.DefaultClient
 	}
 	client.Endpoint = endpoint
+	if client.WebSocketEndpoint == "" && strings.HasPrefix(client.Endpoint, "http") {
+		client.WebSocketEndpoint = "ws" + strings.TrimPrefix(client.Endpoint, "http")
+	}
+	client.WebSocketClient = NewWSClient(client.WebSocketEndpoint, client.WebSocketOption)
 	return client
 }
 
@@ -42,7 +52,8 @@ func (c *Client) Do(ctx context.Context, res interface{}, requests ...Request) e
 		singleReq = requestsLen == 1
 		resList   []interface{}
 	)
-	// batch check
+
+	// batch requests check
 	if !singleReq {
 		var ok bool
 		resList, ok = res.([]interface{})
@@ -163,9 +174,10 @@ func (c *Client) Do(ctx context.Context, res interface{}, requests ...Request) e
 		))
 	}
 	if !c.NotCheckHTTPStatusCode200 && httpResp.StatusCode != http.StatusOK {
-		return &HTTPError{
-			Response:  httpResp,
-			SavedBody: respJson,
+		return &DetailError{
+			OriginError: errors.Errorf("unexpected HTTP response code: %d", httpResp.StatusCode),
+			Content:     respJson,
+			Response:    httpResp,
 		}
 	}
 
@@ -174,9 +186,10 @@ func (c *Client) Do(ctx context.Context, res interface{}, requests ...Request) e
 			Data: res,
 		}
 		if err := json.Unmarshal(savedBody, &resp); err != nil {
-			return &JsonError{
+			return &DetailError{
 				OriginError: err,
-				Json:        respJson,
+				Content:     respJson,
+				Response:    httpResp,
 			}
 		}
 		if len(resp.Errors) > 0 {
@@ -188,9 +201,10 @@ func (c *Client) Do(ctx context.Context, res interface{}, requests ...Request) e
 			resp[k].Data = v
 		}
 		if err := json.Unmarshal(savedBody, &resp); err != nil {
-			return &JsonError{
+			return &DetailError{
 				OriginError: err,
-				Json:        respJson,
+				Content:     respJson,
+				Response:    httpResp,
 			}
 		}
 		errs := make([]GraphQLError, 0)
@@ -205,6 +219,14 @@ func (c *Client) Do(ctx context.Context, res interface{}, requests ...Request) e
 	}
 
 	return nil
+}
+
+func (c *Client) Subscribe(req Request, handler SubscriptionHandler) (id string, err error) {
+	return c.WebSocketClient.Subscribe(req, handler)
+}
+
+func (c *Client) Unsubscribe(id string) error {
+	return c.WebSocketClient.Unsubscribe(id)
 }
 
 func checkFileUpload(singleReq bool, requests []Request) (res map[io.Reader]*graphQLFileWithPath, err error) {
@@ -293,6 +315,11 @@ func getPath(singleReq bool, reqIndex int, varName string, fileIndex ...int) (re
 type response struct {
 	Errors []GraphQLError `json:"errors,omitempty"`
 	Data   interface{}    `json:"data,omitempty"`
+}
+
+type rawResponse struct {
+	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data   json.RawMessage `json:"data,omitempty"`
 }
 
 type graphQLFileWithPath struct {

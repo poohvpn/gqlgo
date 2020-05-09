@@ -2,7 +2,6 @@ package gqlgo
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -18,22 +17,18 @@ type GraphQLError struct {
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
-type HTTPError struct {
-	Response  *http.Response
-	SavedBody string
-}
-
 type GraphQLErrorLocation struct {
 	Line   int `json:"line"`
 	Column int `json:"column"`
 }
 
-type JsonError struct {
+type DetailError struct {
 	OriginError error
-	Json        string
+	Content     string
+	Response    *http.Response
 }
 
-func JsonifyError(e interface{}) string {
+func jsonifyError(e interface{}) string {
 	if e == nil {
 		return "null"
 	}
@@ -45,21 +40,14 @@ func JsonifyError(e interface{}) string {
 }
 
 func (e GraphQLErrors) Error() string {
-	return JsonifyError(e)
+	return jsonifyError(e)
 }
 
 func (e *GraphQLError) Error() string {
-	return JsonifyError(e)
+	return jsonifyError(e)
 }
 
-func (e *HTTPError) Error() string {
-	if e == nil || e.Response == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("unexpected HTTP response code: %d", e.Response.StatusCode)
-}
-
-func (e *JsonError) Error() string {
+func (e *DetailError) Error() string {
 	if e == nil || e.OriginError == nil {
 		return "<nil>"
 	}

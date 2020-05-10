@@ -18,7 +18,7 @@ type Option struct {
 	// HTTPClient should not change to nil after init
 	HTTPClient *http.Client
 
-	// Headers appended to http request every time at the beginning
+	// Headers apply to http request every time at the beginning
 	Headers map[string]string
 
 	// CloseBody will close http request body immediately for reusing of http client
@@ -44,6 +44,9 @@ type Request struct {
 	Variables     map[string]interface{} `json:"variables"`
 	OperationName string                 `json:"operationName,omitempty"`
 	Extensions    interface{}            `json:"extensions,omitempty"`
+
+	// Headers apply to http request at last
+	Headers map[string]string `json:"-"`
 }
 
 type File struct {

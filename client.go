@@ -145,6 +145,11 @@ func (c *Client) Do(ctx context.Context, res interface{}, requests ...Request) e
 	if c.BearerAuth != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+c.BearerAuth)
 	}
+	for _, req := range requests {
+		for k, v := range req.Headers {
+			httpReq.Header.Set(k, v)
+		}
+	}
 
 	if c.Log != nil {
 		c.Log(fmt.Sprintf("%s %s %s, headers: %s, body: %s",

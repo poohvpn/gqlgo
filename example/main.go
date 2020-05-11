@@ -258,14 +258,14 @@ subscription MyQuery {
 
 	recved := make(chan struct{})
 
-	id, err := client.Subscribe(req, func(data json.RawMessage, errors gqlgo.GraphQLErrors, completed bool) error {
+	id, err := client.Subscribe(req, func(data json.RawMessage, gqlErrs gqlgo.GraphQLErrors, completed bool) error {
 		if completed {
 			fmt.Println("server send completed")
 			return nil
 		}
-		if errors != nil {
-			fmt.Println(errors)
-			return errors
+		if gqlErrs != nil {
+			fmt.Println(gqlErrs)
+			return gqlErrs
 		}
 		if err := json.Unmarshal(data, &user); err != nil {
 			fmt.Println(err)

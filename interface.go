@@ -77,4 +77,4 @@ type WSOption struct {
 // GQL_ERROR will be appended to errors, then errors will be a list that contains only one error.
 // completed is true only happens to GraphQL server send completed, if completed is true, data and errors must be nil.
 // while returned error is not nil, Subscription will be unsubscribed.
-type SubscriptionHandler func(data json.RawMessage, gqlErrs GraphQLErrors, completed bool) error
+type SubscriptionHandler func(rawMsg json.RawMessage, gqlErrs GraphQLErrors, completed bool) error

@@ -36,6 +36,7 @@ type Option struct {
 	// WebSocketEndpoint specify websocket endpoint, default is Endpoint's websocket schema
 	WebSocketEndpoint string
 
+	// WebSocketOption specify websocket client option
 	WebSocketOption WSOption
 }
 
@@ -45,7 +46,7 @@ type Request struct {
 	OperationName string                 `json:"operationName,omitempty"`
 	Extensions    interface{}            `json:"extensions,omitempty"`
 
-	// Headers apply to http request at last
+	// Headers apply to http request at last phase of assembling http request.
 	Headers map[string]string `json:"-"`
 }
 
@@ -59,8 +60,10 @@ type WSOption struct {
 	// Dialer specify websocket Dialer, default is using websocket.DefaultDialer
 	Dialer *websocket.Dialer
 
+	// Headers apply to http request
 	Headers map[string]string
 
+	// disable automatic reconnecting
 	NotReconnect bool
 
 	// ReconnectAttempts is the maximum attempts of reconnection after connected, default is math.MaxUint32
@@ -76,5 +79,6 @@ type WSOption struct {
 
 // GQL_ERROR will be appended to errors, then errors will be a list that contains only one error.
 // completed is true only happens to GraphQL server send completed, if completed is true, data and errors must be nil.
-// while returned error is not nil, Subscription will be unsubscribed.
+// when returned error is not nil, Subscription will be unsubscribed.
+// SubscriptionHandler is executed synchronized, return as soon as possible
 type SubscriptionHandler func(rawMsg json.RawMessage, gqlErrs GraphQLErrors, completed bool) error

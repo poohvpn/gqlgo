@@ -198,7 +198,7 @@ func (c *WSClient) run() {
 		case gqlws.MsgTypeComplete:
 			if h, ok := c.subs.Load(msg.ID); ok {
 				if h != nil {
-					go h.(SubscriptionHandler)(nil, nil, true)
+					_ = h.(SubscriptionHandler)(nil, nil, true)
 				}
 				c.subs.Delete(msg.ID)
 			} else {
@@ -207,7 +207,7 @@ func (c *WSClient) run() {
 		case gqlws.MsgTypeError:
 			if h, ok := c.subs.Load(msg.ID); ok {
 				if h != nil {
-					go h.(SubscriptionHandler)(nil, GraphQLErrors{{Message: string(msg.Payload)}}, false)
+					_ = h.(SubscriptionHandler)(nil, GraphQLErrors{{Message: string(msg.Payload)}}, false)
 				}
 				c.subs.Delete(msg.ID)
 			} else {
@@ -220,16 +220,14 @@ func (c *WSClient) run() {
 					if err := json.Unmarshal(msg.Payload, &resp); err != nil {
 						continue
 					}
-					go func(id string, r *rawResponse) {
-						var errs GraphQLErrors
-						if len(r.Errors) > 0 {
-							errs = r.Errors
-						}
-						stopErr := h.(SubscriptionHandler)(r.Data, errs, false)
-						if stopErr != nil {
-							_ = c.Unsubscribe(id)
-						}
-					}(msg.ID, &resp)
+					var errs GraphQLErrors
+					if len(resp.Errors) > 0 {
+						errs = resp.Errors
+					}
+					stopErr := h.(SubscriptionHandler)(resp.Data, errs, false)
+					if stopErr != nil {
+						_ = c.Unsubscribe(msg.ID)
+					}
 				}
 			} else {
 				_ = c.sendMessage(gqlws.MsgTypeStop, msg.ID, nil)
